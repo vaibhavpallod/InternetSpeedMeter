@@ -1,26 +1,15 @@
 package com.vsp.internetspeedmeter.BroadcastReciever;
 
 import android.app.IntentService;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.graphics.drawable.Icon;
 import android.net.TrafficStats;
-import android.os.Build;
-import android.os.IBinder;
-import android.util.Log;
+import android.os.Handler;
 
-import com.vsp.internetspeedmeter.MainActivity;
-import com.vsp.internetspeedmeter.Model.OnCompleteListener;
 import com.vsp.internetspeedmeter.Model.Speed;
-import com.vsp.internetspeedmeter.R;
+import com.vsp.internetspeedmeter.NotificationService;
 
 import androidx.annotation.Nullable;
-
-import static com.vsp.internetspeedmeter.MainActivity.CHANNEL_ID;
-import static com.vsp.internetspeedmeter.MainActivity.TAG;
 
 public class InternetService extends IntentService {
     private boolean checkSpeed = false;
@@ -29,16 +18,42 @@ public class InternetService extends IntentService {
 
 
     private Speed speed;
-    private  Icon icon;
+    private Icon icon;
+    NotificationService notificationService;
+    long dPreBytes = 0, dPostBytes = 0, uPreBytes = 0, uPostBytes = 0;
 
     public InternetService() {
         super(IntentService.class.getName());
     }
-   @Override
+
+    @Override
     public void onCreate() {
         super.onCreate();
-
+        notificationService = new NotificationService(this);
     }
+
+    final private Handler handler = new Handler();
+
+    Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+
+            dPreBytes = dPostBytes;
+            uPreBytes = uPostBytes;
+
+            dPostBytes = TrafficStats.getMobileRxBytes();
+            uPostBytes = TrafficStats.getMobileTxBytes();
+
+            speed = new Speed(dPreBytes, dPostBytes, uPreBytes, uPostBytes);
+
+
+            startForeground(1, notificationService.updateNotification(speed).build());
+
+
+            handler.postAtTime(runnable, 1000);
+        }
+    };
+
 
     @Override
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
@@ -46,34 +61,25 @@ public class InternetService extends IntentService {
 
     }
 
+
     @Override
     protected void onHandleIntent(@Nullable Intent intent) {
 
         checkSpeed = true;
 
 
-
-
         while (checkSpeed) {
 
             if (checkSpeed) {
-                long dPreBytes = TrafficStats.getMobileRxBytes();
-                long uPreBytes = TrafficStats.getMobileTxBytes();
-
+                long dPreBytes = dPostBytes;
+                long uPreBytes = uPostBytes;
                 long dPostBytes = TrafficStats.getMobileRxBytes();
                 long uPostBytes = TrafficStats.getMobileTxBytes();
 
-                speed.getSpeed(new OnCompleteListener<String>() {
-                    @Override
-                    public void OnComplete(@Nullable String mDownloadSpeedWithDecimals, @Nullable String mDUnits, @Nullable String mUploadSpeedWithDecimals, @Nullable String mUUnits, @Nullable String mTotalMobileData, @Nullable String mMTUnits) {
-                        speed= new Speed(dPreBytes, dPostBytes, uPreBytes, uPostBytes);
+                speed = new Speed(dPreBytes, dPostBytes, uPreBytes, uPostBytes);
 
 
-//                        startForeground(1, mBuilder.build());
-
-
-                    }
-                });
+                startForeground(1, notificationService.updateNotification(speed).build());
 
 
 //                Log.e(TAG, "Down: " + mDownloadSpeedWithDecimals + " " + mDUnits + " Up " + mUploadSpeedWithDecimals + " " + mUUnits);
