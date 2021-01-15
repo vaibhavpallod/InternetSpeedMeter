@@ -1,38 +1,43 @@
 package com.vsp.internetspeedmeter.BroadcastReciever;
 
 import android.app.IntentService;
+import android.app.Service;
 import android.content.Intent;
 import android.graphics.drawable.Icon;
 import android.net.TrafficStats;
+import android.os.Build;
 import android.os.Handler;
+import android.os.IBinder;
+import android.util.Log;
 
 import com.vsp.internetspeedmeter.Model.Speed;
 import com.vsp.internetspeedmeter.NotificationService;
+import com.vsp.internetspeedmeter.Room.UsageViewModel;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModelProviders;
 
-public class InternetService extends IntentService {
-    private boolean checkSpeed = false;
+public class InternetService extends Service {
 //    float todaydata = 0;
 //    String mDownloadSpeedWithDecimals, mUploadSpeedWithDecimals, mTotalSpeedWithDecimals, mTotalMobileData, mDUnits, mUUnits, mTUnits = "B/s", mMTUnits = "MB";
 
+    private boolean mNotificationCreated = false;
 
     private Speed speed;
     private Icon icon;
     NotificationService notificationService;
     long dPreBytes = 0, dPostBytes = 0, uPreBytes = 0, uPostBytes = 0;
-
-    public InternetService() {
-        super(IntentService.class.getName());
-    }
+    final private Handler handler = new Handler();
 
     @Override
     public void onCreate() {
         super.onCreate();
         notificationService = new NotificationService(this);
+        speed = new Speed(dPreBytes, dPostBytes, uPreBytes, uPostBytes);
     }
 
-    final private Handler handler = new Handler();
 
     Runnable runnable = new Runnable() {
         @Override
@@ -49,20 +54,43 @@ public class InternetService extends IntentService {
 
             startForeground(1, notificationService.updateNotification(speed).build());
 
-
-            handler.postAtTime(runnable, 1000);
+            handler.postDelayed(runnable, 1000);
         }
     };
 
 
     @Override
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
-        return super.onStartCommand(intent, flags, startId);
 
+        notificationService.createNotification();
+        startForeground(1,notificationService.updateNotification(speed).build());
+        restartNotifying();
+
+
+        return START_REDELIVER_INTENT;
+    }
+
+    private void restartNotifying() {
+        Log.e("xxxxxxxxx","restarted");
+
+        handler.removeCallbacks(runnable);
+        handler.post(runnable);
+    }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 
 
-    @Override
+
+
+
+}
+
+
+/* @Override
     protected void onHandleIntent(@Nullable Intent intent) {
 
         checkSpeed = true;
@@ -85,10 +113,8 @@ public class InternetService extends IntentService {
 //                Log.e(TAG, "Down: " + mDownloadSpeedWithDecimals + " " + mDUnits + " Up " + mUploadSpeedWithDecimals + " " + mUUnits);
             }
         }
-    }
+    }*/
 
-
-}
 
 
 /*

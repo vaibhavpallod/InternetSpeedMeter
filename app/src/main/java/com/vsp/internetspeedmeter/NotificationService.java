@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -15,15 +16,29 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Icon;
 import android.os.Build;
+import android.util.Log;
 
+import com.vsp.internetspeedmeter.BroadcastReciever.InternetService;
 import com.vsp.internetspeedmeter.Model.OnCompleteListener;
 import com.vsp.internetspeedmeter.Model.Speed;
+import com.vsp.internetspeedmeter.Room.Usage;
+import com.vsp.internetspeedmeter.Room.UsageRepository;
+import com.vsp.internetspeedmeter.Room.UsageViewModel;
+
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModelProviders;
 
 import static com.vsp.internetspeedmeter.MainActivity.CHANNEL_DESC;
 import static com.vsp.internetspeedmeter.MainActivity.CHANNEL_ID;
 import static com.vsp.internetspeedmeter.MainActivity.CHANNEL_NAME;
+import static com.vsp.internetspeedmeter.MainActivity.TAG;
 
 public class NotificationService {
     private  Notification.Builder mBuilder;
@@ -34,9 +49,23 @@ public class NotificationService {
     Canvas canvas;
     Paint paint,unitsPaint;
     Icon icon;
+//    private UsageViewModel viewModel;
+    private UsageRepository usageRepository;
+    Date c ;
+
+    SimpleDateFormat df;
+    String myDate;
+
+
     public NotificationService(Context context) {
         this.context = context;
         createNotification();
+        usageRepository = new UsageRepository(context);
+        c = Calendar.getInstance().getTime();
+        df = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
+        myDate = df.format(c);
+
+//        viewModel = new ViewModelProvider.AndroidViewModelFactory().create(UsageViewModel.class);
     }
 
     public void createNotification(){
@@ -58,6 +87,7 @@ public class NotificationService {
         mBuilder.setVisibility(Notification.VISIBILITY_SECRET);
         mBuilder.setOngoing(true);
         mBuilder.setShowWhen(false);
+        mBuilder.setPriority(Notification.PRIORITY_MIN);
         mBuilder.setContentIntent(pendingIntent);
         mNotifyMgr = (NotificationManager) context.getSystemService(context.NOTIFICATION_SERVICE);
 
@@ -74,7 +104,13 @@ public class NotificationService {
                 mBuilder.setContentTitle("Down: " + mDownloadSpeedWithDecimals + " " + mDUnits + "   Up: " + mUploadSpeedWithDecimals + " " + mUUnits);
                 mBuilder.setContentText("Mobile: " + mTotalMobileData + " " + mMTUnits);
 
-
+                //                try {
+//                    usageRepository.insert(new Usage(myDate,mTotalMobileData,"300","300"));
+//
+//                }catch (Exception e){
+//                    usageRepository.update(new Usage(myDate,mTotalMobileData,"300","300"));
+//
+//                }
             }
         });
 
@@ -127,5 +163,9 @@ public class NotificationService {
             NotificationManager manager = context.getSystemService(NotificationManager.class);
             manager.createNotificationChannel(channel);
         }
+    }
+
+    public void start(Service servicecontext) {
+
     }
 }
