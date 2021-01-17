@@ -24,6 +24,6 @@ public interface UsageDao {
     @Query("DELETE FROM Usage_Table")
     void deleteAll();
 
-    @Query("SELECT * FROM Usage_Table ORDER BY date DESC")
+    @Query("SELECT * FROM Usage_Table")
     LiveData<List<Usage>> getAllUsage();
 }

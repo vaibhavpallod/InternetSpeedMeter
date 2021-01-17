@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="3dp"
+    android:orientation="horizontal"
+    android:weightSum="4">
+
+    <TextView
+        android:id="@+id/dateTv"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="3dp"
+        android:layout_weight="1"
+        android:background="@drawable/custom_round_gradient_background_purple"
+        android:padding="3dp"
+        android:text="16 Jan 2021"
+        android:textColor="#ffffff"
+        android:gravity="center"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/mobileTv"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="3dp"
+        android:layout_weight="1"
+        android:background="@color/Grey300"
+        android:padding="3dp"
+        android:text="520 MB"
+        android:textColor="#000000"
+        android:textSize="14sp"
+        android:gravity="center"
+
+        />
+
+    <TextView
+        android:id="@+id/wifiTv"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="3dp"
+        android:layout_weight="1"
+        android:background="@color/Grey300"
+        android:padding="3dp"
+        android:text="520 MB"
+        android:textColor="#000000"
+        android:textSize="14sp"
+        android:gravity="center"
+
+        />
+
+    <TextView
+        android:id="@+id/totalTv"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="3dp"
+        android:layout_weight="1"
+        android:background="@color/Grey300"
+        android:padding="3dp"
+        android:text="520 MB"
+        android:textColor="#000000"
+        android:textSize="14sp"
+        android:gravity="center"
+
+        />
+
+
+</LinearLayout>

@@ -4,9 +4,6 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -29,19 +26,20 @@ public abstract class UsageDatabase extends RoomDatabase {
 
     public abstract UsageDao usageDao();
 
-    public static synchronized UsageDatabase getInstance(Context context){
-        if(instance == null){
+    public static synchronized UsageDatabase getInstance(Context context) {
+        if (instance == null) {
             instance = Room.databaseBuilder(context.getApplicationContext(),
-                    UsageDatabase.class,"usage_database")
+                    UsageDatabase.class, "usage_database")
                     .fallbackToDestructiveMigration()
-//                    .addCallback(roomCallback)
+                    .addCallback(roomCallback)
                     .build();
         }
         return instance;
 
     }
 
-    public static RoomDatabase.Callback roomCallback = new RoomDatabase.Callback(){
+
+    public static RoomDatabase.Callback roomCallback = new RoomDatabase.Callback() {
         @Override
         public void onCreate(@NonNull SupportSQLiteDatabase db) {
             super.onCreate(db);
@@ -51,41 +49,26 @@ public abstract class UsageDatabase extends RoomDatabase {
     };
 
 
-    public static class PopulateDbAsyncTask extends AsyncTask<Void,Void,Void> {
+    public static class PopulateDbAsyncTask extends AsyncTask<Void, Void, Void> {
 
         private UsageDao usageDao;
-        private PopulateDbAsyncTask(UsageDatabase db){
-            this.usageDao=db.usageDao();
+
+        private PopulateDbAsyncTask(UsageDatabase db) {
+            this.usageDao = db.usageDao();
 
         }
+
         @Override
         protected Void doInBackground(Void... voids) {
-            Calendar date = Calendar.getInstance();
-//            String date = "2009/01/01";
             Date c = Calendar.getInstance().getTime();
-
             SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
             String myDate = df.format(c);
-            Log.e(TAG, "doInBackground:Current time => " + c + " date "+ myDate );
-
-
-         /*   DateFormat formatter = new SimpleDateFormat("yyyy/MM/dd", Locale.US);
-            Date myDate = null;
+            Log.e(TAG, "doInBackground:Current time => " + c + " date " + myDate);
             try {
-                myDate = formatter.parse(date.toString());
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }*/
-            usageDao.insert(new Usage(myDate,"100","100","100"));
-//            date = Calendar.getInstance();
-           try {
-               usageDao.insert(new Usage(myDate,"200","200","200"));
-               usageDao.insert(new Usage(myDate,"300","300","300"));
-
-           }catch (Exception e){
-               usageDao.update(new Usage(myDate,"400","300","300"));
-
-           }
+                usageDao.insert(new Usage(myDate, "0", "0", "0"));
+            } catch (Exception e) {
+                usageDao.update(new Usage(myDate, "0", "0", "0"));
+            }
             Log.e(TAG, "doInBackground: added");
             return null;
         }

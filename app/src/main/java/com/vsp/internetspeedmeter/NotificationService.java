@@ -26,6 +26,7 @@ import com.vsp.internetspeedmeter.Room.UsageRepository;
 import com.vsp.internetspeedmeter.Room.UsageViewModel;
 
 import java.sql.Timestamp;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -49,13 +50,10 @@ public class NotificationService {
     Canvas canvas;
     Paint paint,unitsPaint;
     Icon icon;
-//    private UsageViewModel viewModel;
     private UsageRepository usageRepository;
     Date c ;
-
     SimpleDateFormat df;
     String myDate;
-
 
     public NotificationService(Context context) {
         this.context = context;
@@ -64,8 +62,6 @@ public class NotificationService {
         c = Calendar.getInstance().getTime();
         df = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
         myDate = df.format(c);
-
-//        viewModel = new ViewModelProvider.AndroidViewModelFactory().create(UsageViewModel.class);
     }
 
     public void createNotification(){
@@ -90,27 +86,36 @@ public class NotificationService {
         mBuilder.setPriority(Notification.PRIORITY_MIN);
         mBuilder.setContentIntent(pendingIntent);
         mNotifyMgr = (NotificationManager) context.getSystemService(context.NOTIFICATION_SERVICE);
-
         mNotifyMgr.notify(1, mBuilder.build());
 
     }
 
-    public Notification.Builder updateNotification(Speed speed){
+    public Notification.Builder updateNotification(Speed speed,long mTotalBytes){
+
         speed.getSpeed(new OnCompleteListener<String>() {
             @Override
             public void OnComplete(@Nullable String mDownloadSpeedWithDecimals, @Nullable String mDUnits, @Nullable String mUploadSpeedWithDecimals, @Nullable String mUUnits, @Nullable String mTotalMobileData, @Nullable String mMTUnits) {
+                DecimalFormat df1 = new DecimalFormat("#.00");
                 icon= getIcon(mTotalMobileData,mMTUnits);
+                if (mTotalBytes >= 1000000000) {
+                    mTotalMobileData = String.valueOf(df1.format((float) mTotalBytes / (float) 1000000000));
+                    mMTUnits = " GB ";
+
+                } else if (mTotalBytes >= 1000000) {
+                    mTotalMobileData = String.valueOf(df1.format((float) mTotalBytes / (float) 1000000));
+                    mMTUnits = " MB";
+
+                } else if (mTotalBytes >= 1000) {
+                    mTotalMobileData = String.valueOf((int) (mTotalBytes / 1000));
+                    mMTUnits = " KB";
+
+                }
+
                 mBuilder.setSmallIcon(icon);//Icon.createWithBitmap(speed.createBitmapFromString(mTotalMobileData, mMTUnits))
                 mBuilder.setContentTitle("Down: " + mDownloadSpeedWithDecimals + " " + mDUnits + "   Up: " + mUploadSpeedWithDecimals + " " + mUUnits);
                 mBuilder.setContentText("Mobile: " + mTotalMobileData + " " + mMTUnits);
-
-                //                try {
-//                    usageRepository.insert(new Usage(myDate,mTotalMobileData,"300","300"));
-//
-//                }catch (Exception e){
-//                    usageRepository.update(new Usage(myDate,mTotalMobileData,"300","300"));
-//
-//                }
+             usageRepository.update(new Usage(myDate,mTotalMobileData+ " " + mMTUnits,"300","300"));
+//                Log.e(TAG, "onChanged: "+mTotalMobileData+ " " + mMTUnits);
             }
         });
 
@@ -118,6 +123,13 @@ public class NotificationService {
     return mBuilder;
     }
 
+    public void updateDate(){
+        c = Calendar.getInstance().getTime();
+        df = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
+        myDate = df.format(c);
+        usageRepository.insert(new Usage(myDate,"0","0","0"));
+
+    }
 
     public void setupIcon() {
 
