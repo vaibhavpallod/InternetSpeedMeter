@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -15,15 +16,31 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Icon;
 import android.os.Build;
+import android.util.Log;
 
+import com.vsp.internetspeedmeter.BroadcastReciever.InternetService;
 import com.vsp.internetspeedmeter.Model.OnCompleteListener;
 import com.vsp.internetspeedmeter.Model.Speed;
+import com.vsp.internetspeedmeter.Room.Usage;
+import com.vsp.internetspeedmeter.Room.UsageRepository;
+import com.vsp.internetspeedmeter.Room.UsageViewModel;
+
+import java.sql.Timestamp;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModelProviders;
 
 import static com.vsp.internetspeedmeter.MainActivity.CHANNEL_DESC;
 import static com.vsp.internetspeedmeter.MainActivity.CHANNEL_ID;
 import static com.vsp.internetspeedmeter.MainActivity.CHANNEL_NAME;
+import static com.vsp.internetspeedmeter.MainActivity.TAG;
 
 public class NotificationService {
     private  Notification.Builder mBuilder;
@@ -34,9 +51,18 @@ public class NotificationService {
     Canvas canvas;
     Paint paint,unitsPaint;
     Icon icon;
+    private UsageRepository usageRepository;
+    Date c ;
+    SimpleDateFormat df;
+    public String myDate;
+
     public NotificationService(Context context) {
         this.context = context;
         createNotification();
+        usageRepository = new UsageRepository(context);
+        c = Calendar.getInstance().getTime();
+        df = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
+        myDate = df.format(c);
     }
 
     public void createNotification(){
@@ -58,30 +84,64 @@ public class NotificationService {
         mBuilder.setVisibility(Notification.VISIBILITY_SECRET);
         mBuilder.setOngoing(true);
         mBuilder.setShowWhen(false);
+        mBuilder.setPriority(Notification.PRIORITY_MAX);
         mBuilder.setContentIntent(pendingIntent);
-        mNotifyMgr = (NotificationManager) context.getSystemService(context.NOTIFICATION_SERVICE);
+        mBuilder.setOnlyAlertOnce(true);
 
+//        mBuilder.silent
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mBuilder.setBadgeIconType(0);
+        }
+        mNotifyMgr = (NotificationManager) context.getSystemService(context.NOTIFICATION_SERVICE);
         mNotifyMgr.notify(1, mBuilder.build());
 
     }
 
-    public Notification.Builder updateNotification(Speed speed){
+    public Notification.Builder updateNotification(Speed speed,long mTotalBytes){
+
         speed.getSpeed(new OnCompleteListener<String>() {
             @Override
             public void OnComplete(@Nullable String mDownloadSpeedWithDecimals, @Nullable String mDUnits, @Nullable String mUploadSpeedWithDecimals, @Nullable String mUUnits, @Nullable String mTotalMobileData, @Nullable String mMTUnits) {
+                DecimalFormat df1 = new DecimalFormat("#.00");
                 icon= getIcon(mTotalMobileData,mMTUnits);
+                if (mTotalBytes >= 1000000000) {
+                    mTotalMobileData = String.valueOf(df1.format((float) mTotalBytes / (float) 1000000000));
+                    mMTUnits = " GB ";
+
+                } else if (mTotalBytes >= 1000000) {
+                    mTotalMobileData = String.valueOf(df1.format((float) mTotalBytes / (float) 1000000));
+                    mMTUnits = " MB";
+
+                } else if (mTotalBytes >= 1000) {
+                    mTotalMobileData = String.valueOf((int) (mTotalBytes / 1000));
+                    mMTUnits = " KB";
+
+                }
+
                 mBuilder.setSmallIcon(icon);//Icon.createWithBitmap(speed.createBitmapFromString(mTotalMobileData, mMTUnits))
                 mBuilder.setContentTitle("Down: " + mDownloadSpeedWithDecimals + " " + mDUnits + "   Up: " + mUploadSpeedWithDecimals + " " + mUUnits);
                 mBuilder.setContentText("Mobile: " + mTotalMobileData + " " + mMTUnits);
-
-
+             usageRepository.update(new Usage(myDate,mTotalMobileData+ " " + mMTUnits,"300","300"));
+//                Log.e(TAG, "onChanged: "+mTotalMobileData+ " " + mMTUnits);
             }
         });
 
 
     return mBuilder;
     }
+    public int i=0;
+    public void updateDate(){
+        c.setTime(c.getTime()+86400000*i);
+        Log.e(TAG, "updateDate: i value "+i);
+        i++;
+//        c = Calendar.getInstance().setTimeInMillis();
 
+        df = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
+        myDate = df.format(c);
+        usageRepository.insert(new Usage(myDate,"0","0","0"));
+
+    }
 
     public void setupIcon() {
 
@@ -128,4 +188,6 @@ public class NotificationService {
             manager.createNotificationChannel(channel);
         }
     }
+
+
 }

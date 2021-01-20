@@ -21,7 +21,12 @@ public class Speed {
         this.uPostBytes = uPostBytes;
     }
 
-
+    public long getTotalMData(){
+        if(dPreBytes!=0 && uPreBytes!=0)
+        return dPostBytes - dPreBytes + uPostBytes - uPreBytes;
+        else
+            return 0;
+    }
 
     public void getSpeed(OnCompleteListener<String> onCompleteListener) {
 

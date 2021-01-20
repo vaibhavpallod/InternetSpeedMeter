@@ -1,76 +1,120 @@
 package com.vsp.internetspeedmeter;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
-import androidx.core.content.ContextCompat;
-
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.admin.NetworkEvent;
-import android.content.Context;
 import android.content.Intent;
-import android.net.ConnectivityManager;
-import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
-import android.net.wifi.p2p.WifiP2pManager;
-import android.os.Build;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
+import android.util.Log;
 import android.widget.Toast;
 
-import com.facebook.network.connectionclass.ConnectionClassManager;
-import com.facebook.network.connectionclass.ConnectionQuality;
+import com.google.gson.Gson;
 import com.vsp.internetspeedmeter.BroadcastReciever.InternetService;
+import com.vsp.internetspeedmeter.BroadcastReciever.ResetWork;
+import com.vsp.internetspeedmeter.Model.DisplayModel;
+import com.vsp.internetspeedmeter.Recyclerview.UsageAdapter;
+import com.vsp.internetspeedmeter.Room.Usage;
+import com.vsp.internetspeedmeter.Room.UsageViewModel;
 
-public class MainActivity extends AppCompatActivity{
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Timer;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.work.OneTimeWorkRequest;
+
+public class MainActivity extends AppCompatActivity {
     public static final String CHANNEL_ID = "1";
     public static final String CHANNEL_NAME = "SpeedNoti";
     public static final String CHANNEL_DESC = "Hii there";
-public static final String TAG = "internetspeed";
+    public static final String TAG = "internetspeed";
 
+    List<String> date = new ArrayList<>(), mobile = new ArrayList<>(), wifi = new ArrayList<>(), total = new ArrayList<>();
+    private UsageViewModel viewModel;
+    RecyclerView recyclerView;
+    UsageAdapter adapter;
+    SharedPreferences preferences;
+    SharedPreferences.Editor editor;
+    NotificationService notificationService;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        recyclerView = findViewById(R.id.recyclervewUsage);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setHasFixedSize(true);
+        viewModel = new ViewModelProvider(this).get(UsageViewModel.class);
+        adapter = new UsageAdapter(this, new DisplayModel(date, mobile, wifi, total));
+        preferences = getSharedPreferences("internetSpeed", MODE_PRIVATE);
+        editor = preferences.edit();
+        if (!preferences.contains("isStarted")) {
+            editor.putBoolean("isStarted", false);
+            editor.apply();
+        }
+
+        notificationService = new NotificationService(this);
+        Gson gson = new Gson();
+        String s = gson.toJson(notificationService);
+
+        viewModel.getAllNotes().observe(this, new Observer<List<Usage>>() {
+            @Override
+            public void onChanged(List<Usage> usages) {
+                Log.e(TAG, "onChanged: " + usages.size());
+
+                for (int i = 0; i < usages.size(); i++) {
+                    Usage usage = usages.get(i);
+                    if (date.size() != 0) {
+                        date.set(i, usage.getdate());
+                        mobile.set(i, usage.getMobile());
+                        wifi.set(i, usage.getWifi());
+                        total.set(i, usage.getTotal());
+                    } else {
+                        date.add(i, usage.getdate());
+                        mobile.add(i, usage.getMobile());
+                        wifi.add(i, usage.getWifi());
+                        total.add(i, usage.getTotal());
+                    }
 
 
-        Intent serviceintent = new Intent(this, InternetService.class);
-        ContextCompat.startForegroundService(this,serviceintent);
+                    adapter.notifyDataSetChanged();
+                    Log.e(TAG, "onChanged: " + usage.getMobile() + "   " + usage.getdate());
+                }
+            }
+        });
+
+        recyclerView.setAdapter(adapter);
+
+        check();
+
+
+    }
+
+    private void check() {
+        if ((!preferences.contains("isStarted")) || !preferences.getBoolean("isStarted", false)) {
+            editor.putBoolean("isStarted", true);
+            editor.apply();
+            Intent serviceintent = new Intent(this, InternetService.class);
+            startService(serviceintent);
+
+
+        }
 
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
     }
 
 
-    public  void stopService(){
+    public void stopService() {
         Intent serviceintent = new Intent(this, InternetService.class);
         stopService(serviceintent);
     }
 
-
-
-
-
-  /*  public void displaynotification(int up, int down) {
-        NotificationCompat.Builder builder =
-                new NotificationCompat.Builder(this, CHANNEL_ID)
-                        .setSmallIcon(R.drawable.ic_internet_speed_24)
-                        .setContentTitle("Speed: " + down / 1024 + "  KB")
-                        .setContentText("This is a test notification")
-                        .setPriority(NotificationCompat.PRIORITY_MAX);
-
-
-        NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(this);
-
-        notificationManagerCompat.notify(1, builder.build());
-    }
-*/
     private void toast(String x) {
         Toast.makeText(getApplicationContext(), x, Toast.LENGTH_SHORT).show();
     }

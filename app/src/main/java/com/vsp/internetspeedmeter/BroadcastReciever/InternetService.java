@@ -1,38 +1,51 @@
 package com.vsp.internetspeedmeter.BroadcastReciever;
 
-import android.app.IntentService;
+import android.app.Service;
 import android.content.Intent;
 import android.graphics.drawable.Icon;
 import android.net.TrafficStats;
 import android.os.Handler;
+import android.os.IBinder;
+import android.util.Log;
 
+import com.google.gson.Gson;
 import com.vsp.internetspeedmeter.Model.Speed;
 import com.vsp.internetspeedmeter.NotificationService;
 
-import androidx.annotation.Nullable;
+import java.util.Calendar;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
-public class InternetService extends IntentService {
-    private boolean checkSpeed = false;
+import androidx.annotation.Nullable;
+import androidx.work.Data;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
+import androidx.work.WorkRequest;
+
+import static com.vsp.internetspeedmeter.MainActivity.TAG;
+
+public class InternetService extends Service {
 //    float todaydata = 0;
 //    String mDownloadSpeedWithDecimals, mUploadSpeedWithDecimals, mTotalSpeedWithDecimals, mTotalMobileData, mDUnits, mUUnits, mTUnits = "B/s", mMTUnits = "MB";
 
-
+    private boolean mNotificationCreated = false;
+    WorkRequest workRequest;
     private Speed speed;
     private Icon icon;
-    NotificationService notificationService;
-    long dPreBytes = 0, dPostBytes = 0, uPreBytes = 0, uPostBytes = 0;
-
-    public InternetService() {
-        super(IntentService.class.getName());
-    }
+    public NotificationService notificationService;
+    long dPreBytes = 0, dPostBytes = 0, uPreBytes = 0, uPostBytes = 0, mTotoalBytes = 0;
+    final private Handler handler = new Handler();
 
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.e(TAG, "onCreate: ");
         notificationService = new NotificationService(this);
+        speed = new Speed(dPreBytes, dPostBytes, uPreBytes, uPostBytes);
+        mTotoalBytes = 0;
     }
 
-    final private Handler handler = new Handler();
 
     Runnable runnable = new Runnable() {
         @Override
@@ -43,52 +56,84 @@ public class InternetService extends IntentService {
 
             dPostBytes = TrafficStats.getMobileRxBytes();
             uPostBytes = TrafficStats.getMobileTxBytes();
-
+//            if(uPostBytes)
             speed = new Speed(dPreBytes, dPostBytes, uPreBytes, uPostBytes);
+            mTotoalBytes += speed.getTotalMData();
 
+            startForeground(1, notificationService.updateNotification(speed, mTotoalBytes).build());
 
-            startForeground(1, notificationService.updateNotification(speed).build());
-
-
-            handler.postAtTime(runnable, 1000);
+            handler.postDelayed(runnable, 1000);
         }
     };
 
 
     @Override
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
-        return super.onStartCommand(intent, flags, startId);
+//        mTotoalBytes+=Long.valueOf(intent.getStringExtra("prevMData"));
+//        notificationService.createNotification();
+        Log.e(TAG, "onStartCommand: ");
+        startForeground(1, notificationService.updateNotification(speed, mTotoalBytes).build());
+        restartNotifying();
+        initialiseWorker();
+
+        return START_REDELIVER_INTENT;
+    }
+
+    private void initialiseWorker() {
+        Timer timer = new Timer();
+
+        Calendar date = Calendar.getInstance();
+        date.set(Calendar.HOUR_OF_DAY, 16);
+        date.set(Calendar.MINUTE, 55);
+        date.set(Calendar.SECOND, 30);
+        date.set(Calendar.MILLISECOND, 0);
+        Log.e(TAG, "initialiseWorker: " + "Initialised Worker");
+
+        Gson gson = new Gson();
+        String s = gson.toJson(notificationService);
+        Data data = new Data.Builder().putString("noticontext", s).build();
+
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(ResetWork.class, 15, TimeUnit.MINUTES)
+                        .setInputData(data)
+                        .build();
+
+
+                WorkManager.getInstance(getApplicationContext()).enqueue(workRequest);
+
+
+              /*  WorkManager.getInstance(getApplicationContext()).getWorkInfoByIdLiveData(workRequest.getId())
+                        .observe(this, workInfo -> {
+                            if (workInfo.getState() != null &&
+                                    workInfo.getState() == WorkInfo.State.SUCCEEDED) {
+                                Log.e(TAG, "getLifecycle: workinfo called");
+
+                            }
+                        });*/
+            }
+        }, date.getTime());
 
     }
 
+    private void restartNotifying() {
+        Log.e(TAG, "restarted");
 
+        handler.removeCallbacks(runnable);
+        handler.post(runnable);
+    }
+
+    @Nullable
     @Override
-    protected void onHandleIntent(@Nullable Intent intent) {
-
-        checkSpeed = true;
-
-
-        while (checkSpeed) {
-
-            if (checkSpeed) {
-                long dPreBytes = dPostBytes;
-                long uPreBytes = uPostBytes;
-                long dPostBytes = TrafficStats.getMobileRxBytes();
-                long uPostBytes = TrafficStats.getMobileTxBytes();
-
-                speed = new Speed(dPreBytes, dPostBytes, uPreBytes, uPostBytes);
-
-
-                startForeground(1, notificationService.updateNotification(speed).build());
-
-
-//                Log.e(TAG, "Down: " + mDownloadSpeedWithDecimals + " " + mDUnits + " Up " + mUploadSpeedWithDecimals + " " + mUUnits);
-            }
-        }
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 
 
 }
+
+
 
 
 /*
