@@ -7,8 +7,8 @@ import android.net.TrafficStats;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.Toast;
 
+import com.google.gson.Gson;
 import com.vsp.internetspeedmeter.Model.Speed;
 import com.vsp.internetspeedmeter.NotificationService;
 
@@ -18,25 +18,29 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 import androidx.annotation.Nullable;
+import androidx.work.Data;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
+import androidx.work.WorkRequest;
+
+import static com.vsp.internetspeedmeter.MainActivity.TAG;
 
 public class InternetService extends Service {
 //    float todaydata = 0;
 //    String mDownloadSpeedWithDecimals, mUploadSpeedWithDecimals, mTotalSpeedWithDecimals, mTotalMobileData, mDUnits, mUUnits, mTUnits = "B/s", mMTUnits = "MB";
 
     private boolean mNotificationCreated = false;
-
+    WorkRequest workRequest;
     private Speed speed;
     private Icon icon;
-    NotificationService notificationService;
+    public NotificationService notificationService;
     long dPreBytes = 0, dPostBytes = 0, uPreBytes = 0, uPostBytes = 0, mTotoalBytes = 0;
     final private Handler handler = new Handler();
 
     @Override
     public void onCreate() {
         super.onCreate();
-
+        Log.e(TAG, "onCreate: ");
         notificationService = new NotificationService(this);
         speed = new Speed(dPreBytes, dPostBytes, uPreBytes, uPostBytes);
         mTotoalBytes = 0;
@@ -67,6 +71,7 @@ public class InternetService extends Service {
     public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
 //        mTotoalBytes+=Long.valueOf(intent.getStringExtra("prevMData"));
 //        notificationService.createNotification();
+        Log.e(TAG, "onStartCommand: ");
         startForeground(1, notificationService.updateNotification(speed, mTotoalBytes).build());
         restartNotifying();
         initialiseWorker();
@@ -78,22 +83,42 @@ public class InternetService extends Service {
         Timer timer = new Timer();
 
         Calendar date = Calendar.getInstance();
-        date.set(Calendar.HOUR_OF_DAY, 19);
-        date.set(Calendar.MINUTE, 30);
-        date.set(Calendar.SECOND, 0);
+        date.set(Calendar.HOUR_OF_DAY, 16);
+        date.set(Calendar.MINUTE, 55);
+        date.set(Calendar.SECOND, 30);
         date.set(Calendar.MILLISECOND, 0);
-        Toast.makeText(this, "Initialised Worker", Toast.LENGTH_SHORT).show();
+        Log.e(TAG, "initialiseWorker: " + "Initialised Worker");
+
+        Gson gson = new Gson();
+        String s = gson.toJson(notificationService);
+        Data data = new Data.Builder().putString("noticontext", s).build();
+
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(ResetWork.class, 1, TimeUnit.HOURS).build();
+                PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(ResetWork.class, 15, TimeUnit.MINUTES)
+                        .setInputData(data)
+                        .build();
+
+
                 WorkManager.getInstance(getApplicationContext()).enqueue(workRequest);
+
+
+              /*  WorkManager.getInstance(getApplicationContext()).getWorkInfoByIdLiveData(workRequest.getId())
+                        .observe(this, workInfo -> {
+                            if (workInfo.getState() != null &&
+                                    workInfo.getState() == WorkInfo.State.SUCCEEDED) {
+                                Log.e(TAG, "getLifecycle: workinfo called");
+
+                            }
+                        });*/
             }
-        },date.getTime());
+        }, date.getTime());
+
     }
 
     private void restartNotifying() {
-        Log.e("xxxxxxxxx", "restarted");
+        Log.e(TAG, "restarted");
 
         handler.removeCallbacks(runnable);
         handler.post(runnable);

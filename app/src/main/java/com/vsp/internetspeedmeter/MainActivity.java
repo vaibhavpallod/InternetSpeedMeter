@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
 import com.vsp.internetspeedmeter.BroadcastReciever.InternetService;
 import com.vsp.internetspeedmeter.BroadcastReciever.ResetWork;
 import com.vsp.internetspeedmeter.Model.DisplayModel;
@@ -37,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
     UsageAdapter adapter;
     SharedPreferences preferences;
     SharedPreferences.Editor editor;
-
+    NotificationService notificationService;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,7 +52,12 @@ public class MainActivity extends AppCompatActivity {
         editor = preferences.edit();
         if (!preferences.contains("isStarted")) {
             editor.putBoolean("isStarted", false);
+            editor.apply();
         }
+
+        notificationService = new NotificationService(this);
+        Gson gson = new Gson();
+        String s = gson.toJson(notificationService);
 
         viewModel.getAllNotes().observe(this, new Observer<List<Usage>>() {
             @Override
@@ -87,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void check() {
-        if ((!preferences.contains("isStarted")) || preferences.getBoolean("isStarted", false)) {
+        if ((!preferences.contains("isStarted")) || !preferences.getBoolean("isStarted", false)) {
             editor.putBoolean("isStarted", true);
             editor.apply();
             Intent serviceintent = new Intent(this, InternetService.class);

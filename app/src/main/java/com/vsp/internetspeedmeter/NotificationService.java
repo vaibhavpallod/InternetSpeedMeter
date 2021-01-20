@@ -33,6 +33,7 @@ import java.util.Date;
 import java.util.Locale;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelProviders;
 
@@ -53,7 +54,7 @@ public class NotificationService {
     private UsageRepository usageRepository;
     Date c ;
     SimpleDateFormat df;
-    String myDate;
+    public String myDate;
 
     public NotificationService(Context context) {
         this.context = context;
@@ -83,8 +84,15 @@ public class NotificationService {
         mBuilder.setVisibility(Notification.VISIBILITY_SECRET);
         mBuilder.setOngoing(true);
         mBuilder.setShowWhen(false);
-        mBuilder.setPriority(Notification.PRIORITY_MIN);
+        mBuilder.setPriority(Notification.PRIORITY_MAX);
         mBuilder.setContentIntent(pendingIntent);
+        mBuilder.setOnlyAlertOnce(true);
+
+//        mBuilder.silent
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mBuilder.setBadgeIconType(0);
+        }
         mNotifyMgr = (NotificationManager) context.getSystemService(context.NOTIFICATION_SERVICE);
         mNotifyMgr.notify(1, mBuilder.build());
 
@@ -122,9 +130,13 @@ public class NotificationService {
 
     return mBuilder;
     }
-
+    public int i=0;
     public void updateDate(){
-        c = Calendar.getInstance().getTime();
+        c.setTime(c.getTime()+86400000*i);
+        Log.e(TAG, "updateDate: i value "+i);
+        i++;
+//        c = Calendar.getInstance().setTimeInMillis();
+
         df = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
         myDate = df.format(c);
         usageRepository.insert(new Usage(myDate,"0","0","0"));
@@ -177,7 +189,5 @@ public class NotificationService {
         }
     }
 
-    public void start(Service servicecontext) {
 
-    }
 }
