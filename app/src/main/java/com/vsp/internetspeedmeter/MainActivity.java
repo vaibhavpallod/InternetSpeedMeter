@@ -55,9 +55,9 @@ public class MainActivity extends AppCompatActivity {
             editor.apply();
         }
 
-        notificationService = new NotificationService(this);
-        Gson gson = new Gson();
-        String s = gson.toJson(notificationService);
+//        notificationService = new NotificationService(this);
+//        Gson gson = new Gson();
+//        String s = gson.toJson(notificationService);
 
         viewModel.getAllNotes().observe(this, new Observer<List<Usage>>() {
             @Override

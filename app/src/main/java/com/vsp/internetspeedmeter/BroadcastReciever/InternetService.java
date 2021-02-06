@@ -1,6 +1,9 @@
 package com.vsp.internetspeedmeter.BroadcastReciever;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Icon;
 import android.net.TrafficStats;
@@ -11,6 +14,7 @@ import android.util.Log;
 import com.google.gson.Gson;
 import com.vsp.internetspeedmeter.Model.Speed;
 import com.vsp.internetspeedmeter.NotificationService;
+import com.vsp.internetspeedmeter.R;
 
 import java.util.Calendar;
 import java.util.Timer;
@@ -18,6 +22,7 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
 import androidx.work.Data;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
@@ -83,25 +88,28 @@ public class InternetService extends Service {
         Timer timer = new Timer();
 
         Calendar date = Calendar.getInstance();
-        date.set(Calendar.HOUR_OF_DAY, 16);
-        date.set(Calendar.MINUTE, 55);
+        date.set(Calendar.HOUR_OF_DAY, 18);
+        date.set(Calendar.MINUTE, 07);
         date.set(Calendar.SECOND, 30);
         date.set(Calendar.MILLISECOND, 0);
         Log.e(TAG, "initialiseWorker: " + "Initialised Worker");
 
         Gson gson = new Gson();
-        String s = gson.toJson(notificationService);
+//        String s = gson.toJson(notificationService);
+        String s =String.valueOf(notificationService);
         Data data = new Data.Builder().putString("noticontext", s).build();
 
-        timer.schedule(new TimerTask() {
+        timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(ResetWork.class, 15, TimeUnit.MINUTES)
-                        .setInputData(data)
-                        .build();
+//                PeriodicWorkRequest workRequest = new PeriodicWorkRequest.Builder(ResetWork.class, 15, TimeUnit.MINUTES)
+//                        .setInputData(data)
+//                        .build();
+//                displayNotification(notificationService.myDate,"working");
+                Log.e(TAG, "ResetWork: doing work");
 
 
-                WorkManager.getInstance(getApplicationContext()).enqueue(workRequest);
+//                WorkManager.getInstance(getApplicationContext()).enqueue(workRequest);
 
 
               /*  WorkManager.getInstance(getApplicationContext()).getWorkInfoByIdLiveData(workRequest.getId())
@@ -113,7 +121,24 @@ public class InternetService extends Service {
                             }
                         });*/
             }
-        }, date.getTime());
+        }, date.getTime(),1000);
+
+    }
+    private void displayNotification(String title, String task) {
+        NotificationManager notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel("simplifiedcoding", "simplifiedcoding", NotificationManager.IMPORTANCE_DEFAULT);
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        NotificationCompat.Builder notification = new NotificationCompat.Builder(getApplicationContext(), "simplifiedcoding")
+                .setContentTitle(title)
+                .setContentText(task)
+                .setSmallIcon(R.mipmap.ic_launcher);
+
+        notificationManager.notify(1, notification.build());
+
 
     }
 
