@@ -4,7 +4,6 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -12,20 +11,16 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
-import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.util.Log;
 
-import com.vsp.internetspeedmeter.BroadcastReciever.InternetService;
 import com.vsp.internetspeedmeter.Model.OnCompleteListener;
 import com.vsp.internetspeedmeter.Model.Speed;
 import com.vsp.internetspeedmeter.Room.Usage;
 import com.vsp.internetspeedmeter.Room.UsageRepository;
-import com.vsp.internetspeedmeter.Room.UsageViewModel;
 
-import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -33,9 +28,6 @@ import java.util.Date;
 import java.util.Locale;
 
 import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.lifecycle.ViewModelProviders;
 
 import static com.vsp.internetspeedmeter.MainActivity.CHANNEL_DESC;
 import static com.vsp.internetspeedmeter.MainActivity.CHANNEL_ID;
@@ -43,18 +35,19 @@ import static com.vsp.internetspeedmeter.MainActivity.CHANNEL_NAME;
 import static com.vsp.internetspeedmeter.MainActivity.TAG;
 
 public class NotificationService {
-    private  Notification.Builder mBuilder;
-    private  NotificationManager mNotifyMgr;
+    private Notification.Builder mBuilder;
+    private NotificationManager mNotifyMgr;
     private PendingIntent pendingIntent;
     Context context;
     Bitmap bitmap;
     Canvas canvas;
-    Paint paint,unitsPaint;
+    Paint paint, unitsPaint;
     Icon icon;
     private UsageRepository usageRepository;
-    Date c ;
+    Date c;
     SimpleDateFormat df;
     public String myDate;
+    public int i = 0;
 
     public NotificationService(Context context) {
         this.context = context;
@@ -65,7 +58,7 @@ public class NotificationService {
         myDate = df.format(c);
     }
 
-    public void createNotification(){
+    public void createNotification() {
         createNotificationChannel();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             mBuilder = new Notification.Builder(context, CHANNEL_ID);
@@ -77,7 +70,7 @@ public class NotificationService {
         pendingIntent = PendingIntent.getActivity(context,
                 100, notifiIntent, 0
         );
-        icon= getIcon("0","MB");
+        icon = getIcon("0", "MB");
         mBuilder.setSmallIcon(icon);//Icon.createWithBitmap(speed.createBitmapFromString(mTotalMobileData, mMTUnits))
         mBuilder.setContentTitle("Down: " + 0 + " " + "MB" + "   Up: " + 0 + " " + "MB");
         mBuilder.setContentText("Mobile: " + 0 + " " + "MB");
@@ -98,13 +91,13 @@ public class NotificationService {
 
     }
 
-    public Notification.Builder updateNotification(Speed speed,long mTotalBytes){
+    public Notification.Builder updateNotification(Speed speed, long mTotalBytes) {
 
         speed.getSpeed(new OnCompleteListener<String>() {
             @Override
             public void OnComplete(@Nullable String mDownloadSpeedWithDecimals, @Nullable String mDUnits, @Nullable String mUploadSpeedWithDecimals, @Nullable String mUUnits, @Nullable String mTotalMobileData, @Nullable String mMTUnits) {
                 DecimalFormat df1 = new DecimalFormat("#.00");
-                icon= getIcon(mTotalMobileData,mMTUnits);
+                icon = getIcon(mTotalMobileData, mMTUnits);
                 if (mTotalBytes >= 1000000000) {
                     mTotalMobileData = String.valueOf(df1.format((float) mTotalBytes / (float) 1000000000));
                     mMTUnits = " GB ";
@@ -122,24 +115,24 @@ public class NotificationService {
                 mBuilder.setSmallIcon(icon);//Icon.createWithBitmap(speed.createBitmapFromString(mTotalMobileData, mMTUnits))
                 mBuilder.setContentTitle("Down: " + mDownloadSpeedWithDecimals + " " + mDUnits + "   Up: " + mUploadSpeedWithDecimals + " " + mUUnits);
                 mBuilder.setContentText("Mobile: " + mTotalMobileData + " " + mMTUnits);
-             usageRepository.update(new Usage(myDate,mTotalMobileData+ " " + mMTUnits,"300","300"));
+                usageRepository.update(new Usage(myDate, mTotalMobileData + " " + mMTUnits, "300", "300"));
 //                Log.e(TAG, "onChanged: "+mTotalMobileData+ " " + mMTUnits);
             }
         });
 
 
-    return mBuilder;
+        return mBuilder;
     }
-    public int i=0;
-    public void updateDate(){
-        c.setTime(c.getTime()+86400000*i);
-        Log.e(TAG, "updateDate: i value "+i);
+
+    public void updateDate() {
+        c.setTime(c.getTime() + 86400000 * i);
+        Log.e(TAG, "updateDate: i value " + i);
         i++;
 //        c = Calendar.getInstance().setTimeInMillis();
 
         df = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
         myDate = df.format(c);
-        usageRepository.insert(new Usage(myDate,"0","0","0"));
+        usageRepository.insert(new Usage(myDate, "0", "0", "0"));
 
     }
 
@@ -172,7 +165,7 @@ public class NotificationService {
 
     }
 
-    Icon getIcon(String speed, String units){
+    Icon getIcon(String speed, String units) {
         canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
         canvas.drawText(speed, 48, 52, paint);
         canvas.drawText(units, 48, 95, unitsPaint);
